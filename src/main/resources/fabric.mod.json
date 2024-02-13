@@ -17,15 +17,16 @@
   "entrypoints": {
     "main": [
       "io.github.reoseah.catwalks.ExampleMod",
-      "io.github.reoseah.parts.core.PartsCore::initialize"
+      "io.github.reoseah.compartable.core.CompartableCore::initialize"
     ],
     "client": [
       "io.github.reoseah.catwalks.ExampleModClient",
-      "io.github.reoseah.parts.core.PartsCore::initializeClient"
+      "io.github.reoseah.compartable.core.CompartableCore::initializeClient"
     ]
   },
   "mixins": [
-    "modid.mixins.json"
+    "modid.mixins.json",
+    "compartable.core.mixins.json"
   ],
   "depends": {
     "fabricloader": ">=0.15.0",

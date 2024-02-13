@@ -1,4 +1,4 @@
-package io.github.reoseah.parts.api;
+package io.github.reoseah.compartable.api;
 
 /**
  * A {@link net.minecraft.block.Block} that can share its block space with other blocks.
@@ -6,5 +6,4 @@ package io.github.reoseah.parts.api;
  * @see PartContainer
  */
 public interface Part {
-
 }

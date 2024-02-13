@@ -1,4 +1,4 @@
-package io.github.reoseah.parts.api;
+package io.github.reoseah.compartable.api;
 
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.IntProperty;

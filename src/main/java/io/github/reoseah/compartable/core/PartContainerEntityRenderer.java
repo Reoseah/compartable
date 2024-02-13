@@ -1,4 +1,4 @@
-package io.github.reoseah.parts.core;
+package io.github.reoseah.compartable.core;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;

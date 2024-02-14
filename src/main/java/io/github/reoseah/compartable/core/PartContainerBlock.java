@@ -1,14 +1,12 @@
 package io.github.reoseah.compartable.core;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.mojang.serialization.MapCodec;
 import io.github.reoseah.compartable.api.PartContainerProperties;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.BlockWithEntity;
-import net.minecraft.block.ShapeContext;
+import net.minecraft.block.*;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.player.PlayerEntity;
@@ -33,6 +31,7 @@ import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -197,12 +196,15 @@ public class PartContainerBlock extends BlockWithEntity {
     public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
         BlockEntity entity = world.getBlockEntity(pos);
         if (entity instanceof PartContainerBlockEntity container) {
-            for (BlockState part : ImmutableSet.copyOf(container.parts.keySet())) {
+            for (Map.Entry<BlockState, @Nullable BlockEntity> entry : new HashMap<>(container.parts).entrySet()) {
+                BlockState part = entry.getKey();
                 BlockState replacement = part.getStateForNeighborUpdate(direction, neighborState, world, pos, neighborPos);
                 if (!world.getBlockState(pos).isOf(this)) {
                     container.repairAfterWorldMutation(part);
-                }
-                if (replacement != part) {
+                } else if (replacement != part) {
+                    if (replacement == Blocks.AIR.getDefaultState()) {
+                        Block.dropStacks(part, world, pos, entry.getValue());
+                    }
                     container.replacePart(part, replacement);
                 }
             }
@@ -211,6 +213,7 @@ public class PartContainerBlock extends BlockWithEntity {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         BlockEntity entity = world.getBlockEntity(pos);
         if (entity instanceof PartContainerBlockEntity container) {

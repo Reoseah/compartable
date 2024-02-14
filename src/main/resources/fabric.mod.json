@@ -26,7 +26,8 @@
   },
   "mixins": [
     "modid.mixins.json",
-    "compartable.core.mixins.json"
+    "compartable.core.mixins.json",
+    "compartable.vanillaparts.mixins.json"
   ],
   "depends": {
     "fabricloader": ">=0.15.0",

@@ -3,21 +3,36 @@ package io.github.reoseah.compartable.core;
 import com.google.common.collect.ImmutableSet;
 import io.github.reoseah.compartable.api.Part;
 import io.github.reoseah.compartable.api.PartContainer;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.LeverBlock;
+import net.minecraft.block.*;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.block.enums.BlockFace;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtElement;
+import net.minecraft.nbt.NbtHelper;
+import net.minecraft.nbt.NbtList;
+import net.minecraft.network.listener.ClientPlayPacketListener;
+import net.minecraft.network.packet.Packet;
+import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
+import net.minecraft.registry.*;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.entry.RegistryEntryList;
+import net.minecraft.registry.tag.TagKey;
+import net.minecraft.server.world.ServerChunkManager;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public class PartContainerBlockEntity extends BlockEntity implements PartContainer {
     public static final BlockEntityType<PartContainerBlockEntity> TYPE = new BlockEntityType<>(PartContainerBlockEntity::new, ImmutableSet.of(PartContainerBlock.INSTANCE), null);
@@ -33,9 +48,87 @@ public class PartContainerBlockEntity extends BlockEntity implements PartContain
     }
 
     {
-        // FIXME testing code
-        this.parts.put(Blocks.REDSTONE_TORCH.getDefaultState(), null);
-        this.parts.put(Blocks.LEVER.getDefaultState().with(LeverBlock.FACE, BlockFace.CEILING), null);
+        this.parts.put(Blocks.OAK_FENCE.getDefaultState(), null);
+        this.parts.put(Blocks.LEVER.getDefaultState().with(LeverBlock.FACE, BlockFace.WALL).with(LeverBlock.FACING, Direction.NORTH), null);
+        this.parts.put(Blocks.REDSTONE_WALL_TORCH.getDefaultState().with(WallRedstoneTorchBlock.FACING, Direction.SOUTH), null);
+    }
+
+    @Override
+    protected void writeNbt(NbtCompound nbt) {
+        super.writeNbt(nbt);
+        NbtList partsNbt = new NbtList();
+        for (Map.Entry<BlockState, @Nullable BlockEntity> entry : this.parts.entrySet()) {
+            NbtCompound partNbt = new NbtCompound();
+            partNbt.put("state", NbtHelper.fromBlockState(entry.getKey()));
+            if (entry.getValue() != null) {
+                NbtCompound entityNbt = entry.getValue().createNbt();
+                partNbt.put("entity", entityNbt);
+            }
+            partsNbt.add(partNbt);
+        }
+        nbt.put("parts", partsNbt);
+    }
+
+    @Override
+    public void readNbt(NbtCompound nbt) {
+        super.readNbt(nbt);
+
+        RegistryEntryLookup<Block> lookup = new RegistryEntryLookup<>() {
+            @Override
+            public Optional<RegistryEntry.Reference<Block>> getOptional(RegistryKey<Block> key) {
+                return Registries.BLOCK.getEntry(key);
+            }
+
+            @Override
+            public Optional<RegistryEntryList.Named<Block>> getOptional(TagKey<Block> tag) {
+                return Registries.BLOCK.getTagCreatingWrapper().getOptional(tag);
+            }
+        };
+
+        NbtList partsNbt = nbt.getList("parts", 10);
+        this.parts.clear();
+        for (int i = 0; i < partsNbt.size(); i++) {
+            NbtCompound partNbt = partsNbt.getCompound(i);
+            BlockState state = NbtHelper.toBlockState(lookup, partNbt.getCompound("state"));
+            @Nullable BlockEntity entity = null;
+            if (partNbt.contains("entity", NbtElement.COMPOUND_TYPE)) {
+                NbtCompound entityNbt = partNbt.getCompound("entity");
+                entity = BlockEntity.createFromNbt(this.pos, state, entityNbt);
+            }
+            this.parts.put(state, entity);
+        }
+    }
+
+    @Nullable
+    @Override
+    public Packet<ClientPlayPacketListener> toUpdatePacket() {
+        return BlockEntityUpdateS2CPacket.create(this);
+    }
+
+    @Override
+    public NbtCompound toInitialChunkDataNbt() {
+        NbtCompound tag = super.toInitialChunkDataNbt();
+        // TODO reduce amount of data sent
+        this.writeNbt(tag);
+        return tag;
+    }
+
+    public @Nullable BlockState getFirstMatchingPart(Block block) {
+        for (BlockState state : this.getParts().keySet()) {
+            if (state.isOf(block)) {
+                return state;
+            }
+        }
+        return null;
+    }
+
+    public @Nullable BlockState getFirstMatchingPart(TagKey<Block> tag) {
+        for (BlockState state : this.getParts().keySet()) {
+            if (state.isIn(tag)) {
+                return state;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -82,6 +175,8 @@ public class PartContainerBlockEntity extends BlockEntity implements PartContain
             this.outlineShape = null;
             this.sidesShape = null;
 
+            this.markDirty();
+
             return true;
         }
         return false;
@@ -115,6 +210,8 @@ public class PartContainerBlockEntity extends BlockEntity implements PartContain
         this.collisionShape = null;
         this.outlineShape = null;
         this.sidesShape = null;
+
+        this.markDirty();
     }
 
     public VoxelShape getCollisionShape() {

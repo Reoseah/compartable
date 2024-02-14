@@ -26,6 +26,16 @@ public abstract class PartContainerPackets {
     public static final byte REMOVE = 0;
     public static final byte ADD = 1;
 
+    public static void syncPartInsertion(PartContainerBlockEntity container, BlockState part, BlockEntity entity) {
+        PacketByteBuf buffer = new PacketByteBuf(Unpooled.buffer());
+        buffer.writeBlockPos(container.getPos());
+        buffer.writeVarInt(1);
+        buffer.writeByte(ADD);
+        buffer.writeVarInt(Block.STATE_IDS.getRawId(part));
+        // TODO write entity
+        PlayerLookup.tracking(container).forEach(player -> ServerPlayNetworking.send(player, UPDATE, buffer));
+    }
+
     public static void syncPartReplacement(PartContainerBlockEntity container, BlockState part, BlockState replacementPart, @Nullable PlayerEntity syncUnneeded) {
         PacketByteBuf buffer = new PacketByteBuf(Unpooled.buffer());
         buffer.writeBlockPos(container.getPos());
@@ -34,6 +44,7 @@ public abstract class PartContainerPackets {
         buffer.writeVarInt(Block.STATE_IDS.getRawId(part));
         buffer.writeByte(ADD);
         buffer.writeVarInt(Block.STATE_IDS.getRawId(replacementPart));
+        // TODO write entity
         PlayerLookup.tracking(container).forEach(player -> {
             if (player == syncUnneeded) {
                 return;

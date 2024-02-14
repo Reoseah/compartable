@@ -59,6 +59,11 @@ public class PartContainerBlockEntity extends BlockEntity implements PartContain
     }
 
     @Override
+    public @Nullable BlockEntity getPartEntity(BlockState part) {
+        return this.parts.get(part);
+    }
+
+    @Override
     public boolean canInsert(BlockState state, @Nullable BlockEntity entity) {
         // TODO check for collision with other parts
         return state.getBlock() instanceof Part;
@@ -69,8 +74,14 @@ public class PartContainerBlockEntity extends BlockEntity implements PartContain
         if (this.canInsert(state, entity)) {
             this.parts.put(state, entity);
 
-            // TODO update collision and outline shapes
-            //  sync to clients
+            if (!this.world.isClient) {
+                PartContainerPackets.syncPartInsertion(this, state, entity);
+            }
+
+            this.collisionShape = null;
+            this.outlineShape = null;
+            this.sidesShape = null;
+
             return true;
         }
         return false;

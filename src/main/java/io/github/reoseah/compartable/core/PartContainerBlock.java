@@ -2,7 +2,7 @@ package io.github.reoseah.compartable.core;
 
 import com.google.common.collect.ImmutableSet;
 import com.mojang.serialization.MapCodec;
-import io.github.reoseah.compartable.api.Parts;
+import io.github.reoseah.compartable.api.PartContainerProperties;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.Block;
@@ -41,11 +41,11 @@ public class PartContainerBlock extends BlockWithEntity {
 
     public static final PartContainerBlock INSTANCE = new PartContainerBlock(Block.Settings.create() //
             .nonOpaque() //
-            .luminance(state -> state.get(Parts.LUMINANCE)));
+            .luminance(state -> state.get(PartContainerProperties.LUMINANCE)));
 
     protected PartContainerBlock(Settings settings) {
         super(settings);
-        this.setDefaultState(this.stateManager.getDefaultState().with(Parts.LUMINANCE, 0).with(Parts.EMITS_REDSTONE, false));
+        this.setDefaultState(this.stateManager.getDefaultState().with(PartContainerProperties.LUMINANCE, 0).with(PartContainerProperties.EMITS_REDSTONE, false));
     }
 
     @Override
@@ -55,7 +55,7 @@ public class PartContainerBlock extends BlockWithEntity {
 
     @Override
     protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
-        builder.add(Parts.LUMINANCE, Parts.EMITS_REDSTONE);
+        builder.add(PartContainerProperties.LUMINANCE, PartContainerProperties.EMITS_REDSTONE);
     }
 
     @Nullable
@@ -67,7 +67,7 @@ public class PartContainerBlock extends BlockWithEntity {
     @Override
     @SuppressWarnings("deprecation")
     public boolean emitsRedstonePower(BlockState state) {
-        return state.get(Parts.EMITS_REDSTONE);
+        return state.get(PartContainerProperties.EMITS_REDSTONE);
     }
 
     @Override
@@ -152,7 +152,7 @@ public class PartContainerBlock extends BlockWithEntity {
         }
         BlockEntity entity = world.getBlockEntity(pos);
         if (entity instanceof PartContainerBlockEntity container) {
-            @Nullable Map.Entry<BlockState, @Nullable BlockEntity> part = container.getPartAtPoint(hit.getPos());
+            @Nullable Map.Entry<BlockState, @Nullable BlockEntity> part = container.getPartAtPoint(hit.getPos().x, hit.getPos().y, hit.getPos().z);
             if (part != null) {
                 return part.getKey().getBlock().getPickStack(world, pos, part.getKey());
             }
@@ -165,7 +165,7 @@ public class PartContainerBlock extends BlockWithEntity {
     public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         BlockEntity entity = world.getBlockEntity(pos);
         if (entity instanceof PartContainerBlockEntity container) {
-            @Nullable Map.Entry<BlockState, @Nullable BlockEntity> part = container.getPartAtPoint(hit.getPos());
+            @Nullable Map.Entry<BlockState, @Nullable BlockEntity> part = container.getPartAtPoint(hit.getPos().x, hit.getPos().y, hit.getPos().z);
             if (part != null) {
                 BlockState partState = part.getKey();
                 ActionResult result = partState.getBlock().onUse(partState, world, pos, player, hand, hit);
